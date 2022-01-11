@@ -16,8 +16,37 @@ An election is started with one or more node assumes candidacy, which is the res
 
 https://www.freecodecamp.org/news/in-search-of-an-understandable-consensus-algorithm-a-summary-4bc294c97e0d/
 
-##Log Replication
+## Log Replication
 
 Log replication is managed by the leader. Clients requests are handled by the leader, which consist of a command to be executed by the replicated state machines in the system. The leader first logs this locally and spreads the messages to all the follower about the updated entry. Followers log the updates in the message, and feedback to the leader as a consent to the update. Once the majority consents to the update, the leader will then "commit" this transaction to its local state machine and respond to the client about the success. Messages to inform all the followers to commit their replicates are sent at the meantime. The "commit" actions to transact all the previous staged logs if any was left undone.
 
 Logs could be inconsistent in the case of leader crash, where some previous logs are not fully replicated to all its followers. In such cases, the new leader will request the followers to update their logs to reach consensus with the leader's state.
+
+## Communication between client and server
+
+The client interacts with the server in REST fashion, with an HTTP request to the route /request using the mandated JSON format as a body of the request.
+GET request
+
+@app.route("/request", methods=['GET'])
+
+    if we are the leader: we access the store and reply with key and value
+    if we are a follower: we reply with the IP address of the leader, the clients automatically retries to send the same request to the leader
+    if we are a candidate we reply with a failure, it means an election is going on and we do not know who is the leader right now.
+
+GET reply
+
+    if the key is present in the storage a code:success is returned, with a payload of key and value
+    else a code:fail is returned with no payload
+
+PUT request
+
+@app.route("/request", methods=['PUT'])
+
+    if we are the leader: we start the process of log replication and we reply positively once a majority of followers has added this update to their log, more details in the Log Replication paragraph
+    if we are a follower: we reply with the IP address of the leader, the clients automatically retries to send the same request to the leader
+    if we are a candidate we reply with a failure, it means an election is going on and we do not know who is the leader right now.
+
+PUT reply
+
+    if the key is successfully inserted in the key-value store a code:success is returned, with no payload
+    else a code:fail is returned with no payload
